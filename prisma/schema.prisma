@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventType {
+  WEDDING
+  BIRTHDAY
+  BABY_SHOWER
+  GRADUATION
+  OTHER
+}
+
+enum InvitationStatus {
+  PENDING
+  PAID
+  ACTIVE
+  EXPIRED
+}
+
+enum PlanType {
+  BASIC
+  PREMIUM
+}
+
+model Invitation {
+  id            String            @id @default(cuid())
+  eventType     EventType
+  planType      PlanType
+  status        InvitationStatus  @default(PENDING)
+  
+  // Event details
+  title         String
+  eventDate     DateTime
+  eventTime     String?
+  location      String?
+  description   String?           @db.Text
+  
+  // Couple/Host names
+  hostName1     String
+  hostName2     String?
+  
+  // Contact
+  email         String
+  phone         String?
+  
+  // Premium features
+  photos        String?           @db.Text // JSON array of photo URLs
+  musicUrl      String?
+  customMessage String?           @db.Text
+  
+  // QR Code
+  qrCodeUrl     String?
+  
+  // Metadata
+  viewCount     Int               @default(0)
+  rsvpCount     Int               @default(0)
+  
+  // Relations
+  payment       Payment?
+  rsvps         RSVP[]
+  
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  expiresAt     DateTime?
+  
+  @@index([email])
+  @@index([status])
+  @@index([eventDate])
+}
+
+model Payment {
+  id                  String      @id @default(cuid())
+  invitationId        String      @unique
+  invitation          Invitation  @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Stripe
+  stripeSessionId     String      @unique
+  stripePaymentIntent String?
+  
+  // Payment details
+  amount              Int         // in cents
+  currency            String      @default("brl")
+  status              String      // succeeded, pending, failed
+  
+  // Metadata
+  customerEmail       String
+  customerName        String?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  @@index([stripeSessionId])
+  @@index([status])
+}
+
+model RSVP {
+  id            String      @id @default(cuid())
+  invitationId  String
+  invitation    Invitation  @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Guest details
+  guestName     String
+  guestEmail    String?
+  guestPhone    String?
+  
+  // Response
+  attending     Boolean
+  guestsCount   Int         @default(1)
+  message       String?     @db.Text
+  
+  createdAt     DateTime    @default(now())
+  
+  @@index([invitationId])
+}
+
+model Template {
+  id          String    @id @default(cuid())
+  name        String
+  eventType   EventType
+  description String?
+  thumbnail   String?
+  isPremium   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([eventType])
+  @@index([isActive])
+}
