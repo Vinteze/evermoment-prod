@@ -50,27 +50,24 @@ export async function POST(req: NextRequest) {
     expiresAt.setDate(expiresAt.getDate() + 30)
 
     // Criar convite no banco
-    const invite = await prisma.invite.create({
+    const invite = await prisma.invitation.create({
       data: {
         id: inviteId,
         title: eventTitle,
         eventType,
-        date: eventDateObj,
-        time: eventTime,
+        eventDate: eventDateObj,
+        eventTime: eventTime,
         location: eventLocation,
         description: eventDescription,
-        name1,
-        name2,
+        hostName1: name1,
+        hostName2: name2,
         email,
         phone,
-        message,
+        customMessage: message,
         musicUrl,
-        theme: parseInt(theme),
-        plan,
+        planType: plan as any,
         photos: JSON.stringify(photos),
         expiresAt,
-        isPaid: !!paymentId,
-        paymentId,
       },
     })
 
@@ -140,7 +137,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const invite = await prisma.invite.findUnique({
+    const invite = await prisma.invitation.findUnique({
       where: { id: inviteId },
       include: { rsvps: true },
     })
@@ -153,7 +150,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verificar se expirou
-    if (new Date() > invite.expiresAt) {
+    if (invite.expiresAt && new Date() > invite.expiresAt) {
       return NextResponse.json(
         { error: 'Convite expirado' },
         { status: 410 }
